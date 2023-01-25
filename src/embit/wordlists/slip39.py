@@ -1,4 +1,4 @@
-SLIP39_WORDS = [
+SLIP39_WORDS = (
     "academic",
     "acid",
     "acne",
@@ -1023,4 +1023,4 @@ SLIP39_WORDS = [
     "yield",
     "yoga",
     "zero",
-]
+)

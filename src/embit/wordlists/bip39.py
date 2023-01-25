@@ -1,4 +1,4 @@
-WORDLIST = [
+WORDLIST = (
     "abandon",
     "ability",
     "able",
@@ -2047,4 +2047,4 @@ WORDLIST = [
     "zero",
     "zone",
     "zoo",
-]
+)
