@@ -9,6 +9,7 @@ from embit.bip39 import (
     mnemonic_is_valid,
     mnemonic_to_bytes,
     mnemonic_to_seed,
+    WORDLIST,
 )
 from unittest import TestCase
 
@@ -238,3 +239,15 @@ class Bip39Test(TestCase):
                 ),
                 mnemonic
             )
+
+    def test_immutable_wordlist(self):
+        self.assertEqual(len(WORDLIST), 2048)
+        self.assertEqual(WORDLIST.index("zoo"), 2047)
+        self.assertEqual(WORDLIST[2047], "zoo")
+        self.assertEqual(WORDLIST.count("zig"), 0)
+        for word in WORDLIST:
+            self.assertEqual(WORDLIST.count(word), 1)
+        with self.assertRaises(TypeError):
+            WORDLIST[0] = "abandon"
+        with self.assertRaises(AttributeError):
+            WORDLIST.append(WORDLIST.pop())
