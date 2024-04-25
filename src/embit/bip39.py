@@ -8,57 +8,30 @@ PBKDF2_ROUNDS = const(2048)
 
 
 def mnemonic_to_bytes(mnemonic: str, ignore_checksum: bool = False, wordlist=WORDLIST):
-    # this function is copied from Jimmy Song's HDPrivateKey.from_mnemonic() method
-
     words = mnemonic.strip().split()
     if len(words) % 3 != 0 or len(words) < 12:
         raise ValueError("Invalid recovery phrase")
 
-    binary_seed = bytearray()
-    offset = 0
+    accumulator = 0
     for word in words:
         if word not in wordlist:
             raise ValueError("Word '%s' is not in the dictionary" % word)
         index = wordlist.index(word)
-        remaining = 11
-        while remaining > 0:
-            bits_needed = 8 - offset
-            if remaining == bits_needed:
-                if bits_needed == 8:
-                    binary_seed.append(index)
-                else:
-                    binary_seed[-1] |= index
-                offset = 0
-                remaining = 0
-            elif remaining > bits_needed:
-                if bits_needed == 8:
-                    binary_seed.append(index >> (remaining - 8))
-                else:
-                    binary_seed[-1] |= index >> (remaining - bits_needed)
-                remaining -= bits_needed
-                offset = 0
-                # lop off the top 8 bits
-                index &= (1 << remaining) - 1
-            else:
-                binary_seed.append(index << (8 - remaining))
-                offset = remaining
-                remaining = 0
+        accumulator = (accumulator << 11) + index
 
+    entropy_length_bits = len(words) * 11 // 33 * 32
     checksum_length_bits = len(words) * 11 // 33
-    num_remainder = checksum_length_bits % 8
-    if num_remainder:
-        checksum_length = checksum_length_bits // 8 + 1
-        bits_to_ignore = 8 - num_remainder
-    else:
-        checksum_length = checksum_length_bits // 8
-        bits_to_ignore = 0
-    raw = bytes(binary_seed)
-    data, checksum = raw[:-checksum_length], raw[-checksum_length:]
-    computed_checksum = bytearray(hashlib.sha256(data).digest()[:checksum_length])
+    total_length_bytes = (entropy_length_bits + checksum_length_bits) // 8
+    if checksum_length_bits % 8:
+        total_length_bytes += 1
+        accumulator = accumulator << 8 - checksum_length_bits
+    raw = accumulator.to_bytes(total_length_bytes, "big")
+    data = raw[ : entropy_length_bits // 8]
+    checksum = int.from_bytes(raw[entropy_length_bits // 8 : ], "big") >> 8 - checksum_length_bits
+    hashed_entropy = hashlib.sha256(data).digest()
+    computed_checksum = int.from_bytes(hashed_entropy, "big") >> 256 - checksum_length_bits
 
-    # ignore the last bits_to_ignore bits
-    computed_checksum[-1] &= 256 - (1 << (bits_to_ignore + 1) - 1)
-    if not ignore_checksum and checksum != bytes(computed_checksum):
+    if not ignore_checksum and checksum != computed_checksum:
         raise ValueError("Checksum verification failed")
     return data
 
