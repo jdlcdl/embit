@@ -13,11 +13,11 @@ def mnemonic_to_bytes(mnemonic: str, ignore_checksum: bool = False, wordlist=WOR
         raise ValueError("Invalid recovery phrase")
 
     accumulator = 0
-    for word in words:
-        try:
+    try:
+        for word in words:
             accumulator = (accumulator << 11) + wordlist.index(word)
-        except Exception:
-            raise ValueError("Word '%s' is not in the dictionary" % word)
+    except Exception:
+        raise ValueError("Word '%s' is not in the dictionary" % word)
 
     entropy_length_bits = len(words) * 11 // 33 * 32
     checksum_length_bits = len(words) * 11 // 33
