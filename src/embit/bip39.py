@@ -17,9 +17,10 @@ def mnemonic_to_bytes(mnemonic: str, ignore_checksum: bool = False, wordlist=WOR
     binary_seed = bytearray()
     offset = 0
     for word in words:
-        if word not in wordlist:
+        try:
+            index = wordlist.index(word)
+        except Exception:
             raise ValueError("Word '%s' is not in the dictionary" % word)
-        index = wordlist.index(word)
         remaining = 11
         while remaining > 0:
             bits_needed = 8 - offset
