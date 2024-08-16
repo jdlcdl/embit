@@ -9,8 +9,15 @@ from embit.bip39 import (
     mnemonic_is_valid,
     mnemonic_to_bytes,
     mnemonic_to_seed,
+    WORDLIST,
 )
 from unittest import TestCase
+
+class WordIndex(dict):
+    def index(self, word):
+        return self[word]
+# a memory-hungry word->index map: as wordlist for ...is_valid() and ...to_bytes()
+wordindex = WordIndex({word: i for i, word in enumerate(WORDLIST)})
 
 VECTORS = [
     [
@@ -172,19 +179,33 @@ class Bip39Test(TestCase):
             self.assertEqual(hexlify(mnemonic_to_bytes(act_mnemonic)).decode(), seed)
             self.assertEqual(act_xkey.to_base58(), xprv)
 
+    def test_bip39_passing_wordindex_as_wordlist(self):
+        for [seed, exp_mnemonic, hex_seed, xprv] in VECTORS:
+            act_mnemonic = mnemonic_from_bytes(unhexlify(seed))
+            act_xkey = HDKey.from_seed(
+                mnemonic_to_seed(act_mnemonic, password="TREZOR", wordlist=wordindex)
+            )
+            self.assertEqual(act_mnemonic, exp_mnemonic)
+            self.assertTrue(mnemonic_is_valid(act_mnemonic, wordlist=wordindex))
+            self.assertEqual(hexlify(mnemonic_to_bytes(act_mnemonic, wordlist=wordindex)).decode(), seed)
+            self.assertEqual(act_xkey.to_base58(), xprv)
+
     def test_invalid_length(self):
         words = "panel trumpet seek bridge income piano history car flower aim loan accident embark canoe"
         self.assertFalse(mnemonic_is_valid(words))
+        self.assertFalse(mnemonic_is_valid(words, wordlist=wordindex))
 
     def test_invalid_word(self):
         words = "fljsafk minute glow ride mask ceiling old limb rookie discover cotton biology"
         self.assertFalse(mnemonic_is_valid(words))
+        self.assertFalse(mnemonic_is_valid(words, wordlist=wordindex))
 
     def test_invalid_checksum(self):
         words = (
             "ivory canyon lend simple system regret test cool clip foam answer abandon"
         )
         self.assertFalse(mnemonic_is_valid(words))
+        self.assertFalse(mnemonic_is_valid(words, wordlist=wordindex))
 
     def test_invalid_seed(self):
         seed = "0000000000000000000000000000000042"
@@ -230,11 +251,20 @@ class Bip39Test(TestCase):
         ]
         from .data.bip39_es import WORDLIST as ES_WORDLIST
 
+        es_wordindex = WordIndex(
+            {word: i for i, word in enumerate(ES_WORDLIST)}
+        )
+
         for mnemonic, expected_seed in mnemonics:
             self.assertTrue(mnemonic_is_valid(mnemonic, wordlist=ES_WORDLIST))
+            self.assertTrue(mnemonic_is_valid(mnemonic, wordlist=es_wordindex))
 
             self.assertEqual(
                 hexlify(mnemonic_to_seed(mnemonic, wordlist=ES_WORDLIST)).decode(),
+                expected_seed,
+            )
+            self.assertEqual(
+                hexlify(mnemonic_to_seed(mnemonic, wordlist=es_wordindex)).decode(),
                 expected_seed,
             )
 
@@ -245,3 +275,11 @@ class Bip39Test(TestCase):
                 ),
                 mnemonic,
             )
+            self.assertEqual(
+                mnemonic_from_bytes(
+                    mnemonic_to_bytes(mnemonic, wordlist=es_wordindex),
+                    wordlist=ES_WORDLIST,
+                ),
+                mnemonic,
+            )
+
