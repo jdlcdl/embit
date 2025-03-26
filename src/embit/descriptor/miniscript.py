@@ -994,6 +994,7 @@ class N(Wrapper):
 
 class L(Wrapper):
     # IF 0 ELSE [X] ENDIF
+    NAME = "l"
     TYPE = "B"
 
     def inner_compile(self):
@@ -1003,10 +1004,10 @@ class L(Wrapper):
         return len(self.arg) + 4
 
     def verify(self):
-        # both are B, K, or V
+        # both are B, K, or V; since 0 and 1 are B: X is B
         super().verify()
         if self.arg.type != "B":
-            raise MiniscriptError("or_i: X and Z should be the same type")
+            raise MiniscriptError(self.NAME + ": X should be B")
 
     @property
     def properties(self):
@@ -1022,6 +1023,8 @@ class L(Wrapper):
 
 class U(L):
     # IF [X] ELSE 0 ENDIF
+    NAME = "u"
+
     def inner_compile(self):
         return b"\x63" + self.carg + b"\x67" + Number(0).compile() + b"\x68"
 
